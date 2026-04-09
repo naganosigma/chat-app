@@ -34,7 +34,10 @@ function createCode({ label = '招待コード', maxUses = 0, expiresInHours = 0
   return code;
 }
 // 起動時にデフォルトコードを1件作成
-const defaultCode = createCode({ label: 'デフォルト', maxUses: 0 });
+const defaultCode = '0263272328';
+inviteCodes.set(defaultCode, {
+  id: uuidv4(), label: 'デフォルト', maxUses: 0, usedCount: 0, expiresAt: null, createdAt: Date.now(),
+});
 console.log(`🔑 デフォルト招待コード: ${defaultCode}`);
 
 // ── ストレージ ─────────────────────────────────────────────
