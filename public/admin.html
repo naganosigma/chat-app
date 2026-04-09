@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>シグマChat 管理画面</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f14;--surface:#161922;--s2:#1e2230;--s3:#252a3a;
+  --border:rgba(255,255,255,0.09);--accent:#5b8def;--green:#3ecf8e;
+  --red:#f06060;--yellow:#e5c07b;--text:#e8eaf0;--muted:#7a8099;--dim:#4a5068;
+  --font:'Noto Sans JP',sans-serif;--mono:'DM Mono',monospace;
+  --ease:0.18s cubic-bezier(.4,0,.2,1);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── ログイン ── */
+#loginWrap{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(91,141,239,.15) 0%,transparent 70%),var(--bg);
+}
+.login-card{
+  width:100%;max-width:360px;padding:40px 32px;
+  background:var(--surface);border:1px solid var(--border);border-radius:22px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);animation:fadeUp .4s ease;
+}
+.login-logo{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-logo span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.field input,.field select{
+  width:100%;padding:13px 14px;background:var(--s2);
+  border:1.5px solid var(--border);border-radius:9px;
+  color:var(--text);font-family:var(--font);font-size:15px;
+  outline:none;-webkit-appearance:none;transition:border-color var(--ease)
+}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--dim)}
+.field select option{background:var(--s2)}
+.btn-main{
+  width:100%;padding:14px;background:var(--accent);color:#fff;
+  border:none;border-radius:9px;font-family:var(--font);font-size:15px;font-weight:700;
+  cursor:pointer;margin-top:4px;transition:opacity var(--ease),transform var(--ease)
+}
+.btn-main:hover{opacity:.88}
+.btn-main:active{transform:scale(.97);opacity:.8}
+.err-msg{margin-top:10px;font-size:13px;color:var(--red);text-align:center;min-height:18px}
+
+/* ── 管理画面 ── */
+#adminWrap{display:none;min-height:100vh;flex-direction:column}
+
+.topbar{
+  padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:10
+}
+.topbar-logo{font-size:17px;font-weight:700}
+.topbar-logo span{color:var(--accent)}
+.topbar-badge{
+  font-size:11px;padding:3px 9px;border-radius:20px;
+  background:rgba(91,141,239,.18);color:var(--accent);font-weight:600;margin-left:8px
+}
+.logout-btn{
+  padding:8px 16px;border-radius:8px;border:1px solid var(--border);
+  background:var(--s2);color:var(--muted);font-family:var(--font);font-size:13px;
+  cursor:pointer;transition:all var(--ease)
+}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+.main-content{flex:1;padding:24px;max-width:900px;margin:0 auto;width:100%}
+
+/* セクション */
+.section{margin-bottom:32px}
+.section-title{
+  font-size:13px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* 新規コード作成カード */
+.create-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 20px
+}
+.create-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px
+}
+@media(max-width:600px){.create-grid{grid-template-columns:1fr}}
+.create-card .field{margin-bottom:0}
+.btn-create{
+  padding:12px 24px;background:var(--accent);color:#fff;
+  border:none;border-radius:9px;font-family:var(--font);font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity var(--ease)
+}
+.btn-create:hover{opacity:.88}
+.btn-create:active{opacity:.72}
+
+/* コードリスト */
+.code-list{display:flex;flex-direction:column;gap:10px}
+.code-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  transition:border-color var(--ease);animation:fadeIn .2s ease
+}
+.code-card:hover{border-color:rgba(91,141,239,.3)}
+.code-card.expired{opacity:.55}
+.code-card.exhausted{opacity:.55}
+
+.code-main{flex:1;min-width:0}
+.code-value{
+  font-family:var(--mono);font-size:20px;font-weight:500;letter-spacing:2px;
+  color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:10px
+}
+.code-label{font-size:13px;color:var(--muted);margin-bottom:6px}
+.code-meta{display:flex;gap:12px;flex-wrap:wrap}
+.meta-item{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:4px}
+.meta-item b{color:var(--muted)}
+
+.code-badges{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.badge{
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;
+  letter-spacing:.3px;white-space:nowrap
+}
+.badge-ok{background:rgba(62,207,142,.15);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+.badge-warn{background:rgba(229,192,123,.15);color:var(--yellow);border:1px solid rgba(229,192,123,.25)}
+.badge-err{background:rgba(240,96,96,.15);color:var(--red);border:1px solid rgba(240,96,96,.25)}
+
+.code-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.copy-btn{
+  padding:8px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--s2);color:var(--text);font-family:var(--font);font-size:13px;
+  cursor:pointer;display:flex;align-items:center;gap:5px;transition:all var(--ease);white-space:nowrap
+}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.copy-btn.copied{border-color:var(--green);color:var(--green)}
+.del-btn{
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:var(--s2);color:var(--muted);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all var(--ease)
+}
+.del-btn:hover{border-color:var(--red);color:var(--red);background:rgba(240,96,96,.08)}
+
+/* QRコードエリア */
+.qr-area{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap
+}
+.qr-btn{
+  padding:8px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--s2);color:var(--muted);font-family:var(--font);font-size:13px;
+  cursor:pointer;display:flex;align-items:center;gap:5px;transition:all var(--ease);white-space:nowrap
+}
+.qr-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* QRモーダル */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(8px);
+  z-index:100;align-items:center;justify-content:center;padding:20px
+}
+.overlay.show{display:flex}
+.qr-modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:28px 28px;text-align:center;max-width:340px;width:100%;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);animation:fadeUp .3s ease
+}
+.qr-modal h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.qr-modal .qr-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+#qrCanvas{border-radius:12px;background:#fff;padding:10px;margin-bottom:16px}
+.qr-code-disp{
+  font-family:var(--mono);font-size:22px;letter-spacing:3px;
+  color:var(--accent);margin-bottom:16px;font-weight:500
+}
+.qr-url{
+  font-size:11px;color:var(--dim);word-break:break-all;margin-bottom:16px;
+  background:var(--s2);padding:8px 10px;border-radius:7px;text-align:left
+}
+.btn-close{
+  padding:11px 24px;border-radius:9px;border:1px solid var(--border);
+  background:var(--s2);color:var(--text);font-family:var(--font);font-size:14px;
+  cursor:pointer;transition:all var(--ease)
+}
+.btn-close:hover{border-color:var(--accent);color:var(--accent)}
+
+/* オンラインユーザー */
+.users-grid{display:flex;flex-wrap:wrap;gap:8px}
+.user-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:30px
+}
+.u-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.u-name{font-size:13px;font-weight:500}
+.no-users{font-size:13px;color:var(--dim);padding:12px 0}
+
+/* アニメーション */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--s3);border:1px solid var(--border);border-radius:10px;
+  padding:10px 20px;font-size:14px;color:var(--text);
+  opacity:0;transition:all .25s ease;pointer-events:none;z-index:200;white-space:nowrap
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">Σ<span>Chat</span> <span style="font-size:14px;color:var(--muted);font-weight:400">管理画面</span></div>
+    <div class="login-sub">招待コードの管理・発行</div>
+    <div class="field">
+      <label>管理者パスワード</label>
+      <input type="password" id="pwInput" placeholder="パスワードを入力" />
+    </div>
+    <button class="btn-main" id="loginBtn">ログイン</button>
+    <div class="err-msg" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- 管理画面 -->
+<div id="adminWrap">
+  <div class="topbar">
+    <div style="display:flex;align-items:center">
+      <span class="topbar-logo">Σ<span>Chat</span></span>
+      <span class="topbar-badge">管理画面</span>
+    </div>
+    <button class="logout-btn" onclick="logout()">ログアウト</button>
+  </div>
+
+  <div class="main-content">
+
+    <!-- オンラインユーザー -->
+    <div class="section">
+      <div class="section-title">現在のオンラインユーザー</div>
+      <div class="users-grid" id="usersGrid">
+        <div class="no-users">まだ誰も参加していません</div>
+      </div>
+    </div>
+
+    <!-- 招待コード作成 -->
+    <div class="section">
+      <div class="section-title">新しい招待コードを作成</div>
+      <div class="create-card">
+        <div class="create-grid">
+          <div class="field">
+            <label>ラベル（メモ）</label>
+            <input type="text" id="newLabel" placeholder="例：チームA用" maxlength="30" />
+          </div>
+          <div class="field">
+            <label>使用回数制限</label>
+            <select id="newMaxUses">
+              <option value="0">無制限</option>
+              <option value="1">1回のみ</option>
+              <option value="3">3回まで</option>
+              <option value="5">5回まで</option>
+              <option value="10">10回まで</option>
+              <option value="50">50回まで</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>有効期限</label>
+            <select id="newExpiry">
+              <option value="0">無期限</option>
+              <option value="1">1時間</option>
+              <option value="24">24時間</option>
+              <option value="72">3日間</option>
+              <option value="168">7日間</option>
+              <option value="720">30日間</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-create" onclick="createCode()">
+          ＋ コードを発行する
+        </button>
+      </div>
+    </div>
+
+    <!-- 招待コード一覧 -->
+    <div class="section">
+      <div class="section-title">発行済み招待コード</div>
+      <div class="code-list" id="codeList">
+        <div style="font-size:13px;color:var(--dim);padding:12px 0">読み込み中...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- QRモーダル -->
+<div class="overlay" id="qrOverlay" onclick="closeQR()">
+  <div class="qr-modal" onclick="event.stopPropagation()">
+    <h3>招待QRコード</h3>
+    <div class="qr-sub" id="qrLabel"></div>
+    <canvas id="qrCanvas" width="200" height="200"></canvas>
+    <div class="qr-code-disp" id="qrCodeDisp"></div>
+    <div class="qr-url" id="qrUrl"></div>
+    <button class="btn-close" onclick="closeQR()">閉じる</button>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<!-- QR生成ライブラリ (qrcode.js CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+let adminPw = '';
+
+// ── ログイン ──────────────────────────────────────────────
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('pwInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogin() {
+  const pw  = document.getElementById('pwInput').value;
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'パスワードを入力してください'; return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.textContent = '確認中...'; btn.disabled = true;
+  try {
+    const res = await fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    if (!res.ok) { err.textContent = 'パスワードが正しくありません'; return; }
+    adminPw = pw;
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('adminWrap').style.display = 'flex';
+    loadAll();
+    setInterval(loadUsers, 5000); // 5秒ごとに更新
+  } catch {
+    err.textContent = 'サーバーに接続できません';
+  } finally {
+    btn.textContent = 'ログイン'; btn.disabled = false;
+  }
+}
+
+function logout() {
+  adminPw = '';
+  document.getElementById('loginWrap').style.display = 'flex';
+  document.getElementById('adminWrap').style.display = 'none';
+  document.getElementById('pwInput').value = '';
+}
+
+function adminHeaders() {
+  return { 'Content-Type': 'application/json', 'x-admin-password': adminPw };
+}
+
+// ── データ読み込み ─────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadCodes(), loadUsers()]);
+}
+
+async function loadCodes() {
+  try {
+    const res  = await fetch('/admin/codes', { headers: adminHeaders() });
+    const data = await res.json();
+    renderCodes(data);
+  } catch { showToast('コードの取得に失敗しました', true); }
+}
+
+async function loadUsers() {
+  try {
+    const res  = await fetch('/admin/users', { headers: adminHeaders() });
+    const data = await res.json();
+    renderUsers(data);
+  } catch {}
+}
+
+// ── コード作成 ────────────────────────────────────────────
+async function createCode() {
+  const label         = document.getElementById('newLabel').value.trim() || '招待コード';
+  const maxUses       = document.getElementById('newMaxUses').value;
+  const expiresInHours= document.getElementById('newExpiry').value;
+
+  try {
+    const res = await fetch('/admin/codes', {
+      method: 'POST',
+      headers: adminHeaders(),
+      body: JSON.stringify({ label, maxUses, expiresInHours }),
+    });
+    if (!res.ok) throw new Error();
+    document.getElementById('newLabel').value = '';
+    showToast('招待コードを発行しました ✅');
+    await loadCodes();
+  } catch { showToast('発行に失敗しました', true); }
+}
+
+// ── コード削除 ────────────────────────────────────────────
+async function deleteCode(code) {
+  if (!confirm(`コード「${code}」を削除しますか？`)) return;
+  try {
+    const res = await fetch(`/admin/codes/${code}`, { method: 'DELETE', headers: adminHeaders() });
+    if (!res.ok) throw new Error();
+    showToast('削除しました');
+    await loadCodes();
+  } catch { showToast('削除に失敗しました', true); }
+}
+
+// ── 描画 ─────────────────────────────────────────────────
+function renderCodes(list) {
+  const el = document.getElementById('codeList');
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--dim);padding:12px 0">まだコードがありません</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(c => {
+    const isExpired   = c.expired;
+    const isExhausted = c.exhausted;
+    const isOk        = !isExpired && !isExhausted;
+
+    const badgeHtml = isExpired   ? '<span class="badge badge-err">期限切れ</span>' :
+                      isExhausted ? '<span class="badge badge-warn">上限達成</span>' :
+                                    '<span class="badge badge-ok">有効</span>';
+
+    const usesHtml  = c.maxUses > 0
+      ? `${c.usedCount} / ${c.maxUses} 回使用`
+      : `${c.usedCount} 回使用（無制限）`;
+
+    const expHtml   = c.expiresAt
+      ? `有効期限: ${fmtDate(c.expiresAt)}`
+      : '有効期限: 無期限';
+
+    return `
+      <div class="code-card${isExpired?' expired':''}${isExhausted?' exhausted':''}">
+        <div class="code-main">
+          <div class="code-value">
+            <span style="font-family:var(--mono)">${c.code}</span>
+          </div>
+          <div class="code-label">${esc(c.label)}</div>
+          <div class="code-meta">
+            <span class="meta-item">🔢 ${usesHtml}</span>
+            <span class="meta-item">⏰ ${expHtml}</span>
+            <span class="meta-item">📅 発行: ${fmtDate(c.createdAt)}</span>
+          </div>
+        </div>
+        <div class="code-badges">${badgeHtml}</div>
+        <div class="code-actions">
+          <button class="copy-btn" onclick="copyCode('${c.code}', this)">📋 コピー</button>
+          <button class="qr-btn" onclick="showQR('${c.code}','${esc(c.label)}')">📱 QR</button>
+          <button class="del-btn" onclick="deleteCode('${c.code}')" title="削除">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderUsers(list) {
+  const el = document.getElementById('usersGrid');
+  if (!list.length) {
+    el.innerHTML = '<div class="no-users">まだ誰も参加していません</div>';
+    return;
+  }
+  el.innerHTML = list.map(u => `
+    <div class="user-chip">
+      <div class="u-dot"></div>
+      <span class="u-name">${esc(u.username)}</span>
+    </div>`).join('');
+}
+
+// ── コピー ────────────────────────────────────────────────
+function copyCode(code, btn) {
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✅ コピーした';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 コピー'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // フォールバック
+    const ta = document.createElement('textarea');
+    ta.value = code; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast(`コード ${code} をコピーしました`);
+  });
+}
+
+// ── QRコード ──────────────────────────────────────────────
+let qrInstance = null;
+
+function showQR(code, label) {
+  const baseUrl = window.location.origin;
+  const url     = `${baseUrl}/?code=${code}`;
+
+  document.getElementById('qrLabel').textContent  = label;
+  document.getElementById('qrCodeDisp').textContent = code;
+  document.getElementById('qrUrl').textContent    = url;
+
+  const canvas = document.getElementById('qrCanvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 200, 200);
+
+  // QRCodeライブラリで生成
+  const div = document.createElement('div');
+  new QRCode(div, { text: url, width: 180, height: 180, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+  setTimeout(() => {
+    const img = div.querySelector('img') || div.querySelector('canvas');
+    if (img) {
+      const tmpImg = new Image();
+      tmpImg.onload = () => {
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,200,200);
+        ctx.drawImage(tmpImg, 10, 10, 180, 180);
+      };
+      tmpImg.src = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
+    }
+  }, 100);
+
+  document.getElementById('qrOverlay').classList.add('show');
+}
+
+function closeQR() {
+  document.getElementById('qrOverlay').classList.remove('show');
+}
+
+// ── ユーティリティ ────────────────────────────────────────
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer = null;
+function showToast(msg, isErr = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = isErr ? 'var(--red)' : 'var(--border)';
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// URLパラメータでコードを自動入力（QRコード読み取り後対応）
+window.addEventListener('load', () => {
+  // admin.html ではなく index.html 側で処理
+});
+</script>
+</body>
+</html>
