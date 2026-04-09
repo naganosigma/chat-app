@@ -155,6 +155,25 @@ io.on('connection', (socket) => {
     broadcastAndSave(buildMessage({ type: imageUrl ? 'image' : 'text', text, imageUrl, username: user.username, userId: user.id }));
   });
 
+  // 既読
+  socket.on('read:ack', ({ msgId }) => {
+    const user = onlineUsers.get(socket.id);
+    if (!user || !msgId) return;
+    // 該当メッセージを履歴から探してreadersに追加
+    const msg = chatHistory.find(m => m.id === msgId);
+    if (!msg) return;
+    if (!msg.readers) msg.readers = [];
+    if (!msg.readers.includes(user.username)) {
+      msg.readers.push(user.username);
+    }
+    // 送信者と全員に既読カウントを通知
+    io.emit('read:update', {
+      msgId,
+      count:   msg.readers.length,
+      readers: msg.readers,
+    });
+  });
+
   // WebRTC シグナリング
   socket.on('call:offer',  ({ targetId, offer, callerName }) => io.to(targetId).emit('call:incoming',  { callerId: socket.id, callerName, offer }));
   socket.on('call:answer', ({ targetId, answer })            => io.to(targetId).emit('call:answered',  { answer }));
